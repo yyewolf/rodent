@@ -7,3 +7,29 @@
 # Overview
 
 Rodent is a cloud native, high-availability screenshotting service.
+
+# Glossary
+
+- `mischief`: in reference to the fact that a "group of rats" is called a "mischief of rats"
+
+# CLI - Quickstart
+
+Install the CLI:
+
+```bash
+go install github.com/yyewolf/rodent@latest
+```
+
+Take a screenshot:
+
+```bash
+rodent screenshot https://example.com -o example.png
+```
+
+Start the Rodent API Server
+
+```bash
+rodent api
+```
+
+# API - Configuration
