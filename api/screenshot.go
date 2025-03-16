@@ -76,7 +76,12 @@ func (s *ScreenshotRepository) takeScreenshot(writer http.ResponseWriter, req *h
 	}
 
 	writer.Header().Set("Content-Type", "image/png")
-	writer.Write(bytes)
+	_, err = writer.Write(bytes)
+	if err != nil {
+		s.logger.Error("error while writing response", slog.Any("error", err))
+		http.Error(writer, "error while writing response", http.StatusInternalServerError)
+		return
+	}
 }
 
 var _ Repository = &ScreenshotRepository{}

@@ -60,7 +60,10 @@ func New(opts ...MischiefOpt) (*Mischief, error) {
 		opt(&m)
 	}
 
-	m.initialize()
+	err := m.initialize()
+	if err != nil {
+		return nil, err
+	}
 
 	return &m, nil
 }

@@ -36,7 +36,10 @@ var apiCmd = &cobra.Command{
 			panic(err)
 		}
 
-		apiServer.Start()
+		err = apiServer.Start()
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 

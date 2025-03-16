@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 	cmd.Execute()
 }
