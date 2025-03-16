@@ -2,17 +2,25 @@ package mischief
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 )
 
 func createBrowser(controlUrl *string) func() (*rod.Browser, error) {
 	return func() (b *rod.Browser, err error) {
-		browser := rod.New()
-		if controlUrl != nil {
-			browser = rod.New().ControlURL(*controlUrl)
+		if controlUrl == nil {
+			uri, err := launcher.New().Bin(os.Getenv("BROWSER_PATH")).Launch()
+			if err != nil {
+				return nil, err
+			}
+
+			controlUrl = &uri
 		}
+
+		browser := rod.New().ControlURL(*controlUrl)
 
 		err = browser.Connect()
 		if err != nil {
