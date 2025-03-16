@@ -67,6 +67,11 @@ func New(opts ...ApiServerOpt) (*ApiServer, error) {
 	apiServer.server = fuego.NewServer(
 		fuego.WithAddr(fmt.Sprintf("%s:%s", apiServer.host, apiServer.port)),
 		fuego.WithLogHandler(apiServer.logger.Handler()),
+		fuego.WithEngineOptions(
+			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
+				DisableLocalSave: true,
+			}),
+		),
 	)
 
 	apiServer.register()
