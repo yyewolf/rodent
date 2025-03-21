@@ -1,6 +1,9 @@
 package mischief
 
-import "context"
+import (
+	"context"
+	"os"
+)
 
 func (mischief *Mischief) cleanBrowserPool(ctx context.Context) error {
 	for i := 0; i < mischief.concurrency; i++ {
@@ -10,14 +13,14 @@ func (mischief *Mischief) cleanBrowserPool(ctx context.Context) error {
 				continue
 			}
 
-			browser.Browser.Close()
 			browser.Close()
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
 
-	return nil
+	// Clean up the profile directories in /tmp/rod
+	return os.RemoveAll("/tmp/rod")
 }
 
 // Destroy destroys the Mischief instance.
