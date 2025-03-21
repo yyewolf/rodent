@@ -34,8 +34,9 @@ func (mischief *Mischief) TakeScreenshot(url string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Join(ErrOpeningPage, err)
 	}
+	defer page.Close()
 
-	err = page.WaitDOMStable(mischief.pageStabilityTimeout, 10)
+	err = page.WaitDOMStable(mischief.pageStabilityTimeout, 30)
 	if err != nil {
 		return nil, errors.Join(ErrWaitingForPageToBeStable, err)
 	}

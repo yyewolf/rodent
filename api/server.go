@@ -1,9 +1,12 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"os"
 
 	"github.com/go-fuego/fuego"
 	"github.com/yyewolf/rodent/mischief"
@@ -83,6 +86,7 @@ func New(opts ...ApiServerOpt) (*ApiServer, error) {
 func (apiServer *ApiServer) register() {
 	var repositories = []Repository{
 		NewScreenshotRepository(apiServer.mischief, apiServer.logger),
+		NewCleanupRepository(apiServer.mischief, apiServer.logger),
 	}
 
 	group := fuego.Group(apiServer.server, "/api")
@@ -93,6 +97,19 @@ func (apiServer *ApiServer) register() {
 }
 
 // Start starts the API server.
-func (apiServer *ApiServer) Start() error {
-	return apiServer.server.Run()
+func (apiServer *ApiServer) Start() {
+	go func() {
+		err := apiServer.server.Run()
+		apiServer.mischief.Destroy(context.Background())
+
+		if !errors.Is(err, http.ErrServerClosed) {
+			apiServer.logger.Error("error while running the API server", slog.Any("error", err))
+			os.Exit(1)
+		}
+	}()
+}
+
+// Stop stops the API server.
+func (apiServer *ApiServer) Shutdown(ctx context.Context) error {
+	return apiServer.server.Shutdown(ctx)
 }
