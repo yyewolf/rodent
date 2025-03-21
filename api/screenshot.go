@@ -70,6 +70,11 @@ func (s *ScreenshotRepository) takeScreenshot(writer http.ResponseWriter, req *h
 
 	bytes, err := s.mischief.TakeScreenshot(parsedUrl.String())
 	if err != nil {
+		if errors.Is(err, mischief.ErrGettingBrowser) {
+			http.Error(writer, "error while getting browser", http.StatusRequestTimeout)
+			return
+		}
+
 		s.logger.Error("error while taking screenshot", slog.Any("error", err))
 		http.Error(writer, "error while taking screenshot", http.StatusInternalServerError)
 		return
