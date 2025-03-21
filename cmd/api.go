@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,10 +28,13 @@ var apiCmd = &cobra.Command{
 	Short: "Start the Mischief API Server.",
 	Long:  `Start the Mischief API Server.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 		mischief, err := mischief.New(
 			mischief.WithConcurrency(concurrency),
 			mischief.WithBrowserRetakeTimeout(time.Duration(browserRetakeTimeout)*time.Second),
 			mischief.WithPageStabilityTimeout(time.Duration(pageStabilityTimeout)*time.Second),
+			mischief.WithLogger(logger),
 		)
 		if err != nil {
 			panic(err)
@@ -40,6 +44,7 @@ var apiCmd = &cobra.Command{
 			api.WithHost(host),
 			api.WithPort(port),
 			api.WithMischief(mischief),
+			api.WithLogger(logger),
 		)
 		if err != nil {
 			panic(err)
