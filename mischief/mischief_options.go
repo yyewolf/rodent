@@ -23,30 +23,40 @@ func WithExternalBrowsers(urls []string) MischiefOpt {
 	return func(m *Mischief) {
 		m.externalBrowser = true
 		m.browserUrls = urls
-		m.concurrency = len(urls)
+		m.browserConcurrency = len(urls)
 	}
 }
 
-// WithConcurrency is an option to set the concurrency of the
+// WithBrowserConcurrency is an option to set the concurrency of the
 // screenshotting process.
 //
 // By default, this will create a pool of <n> browsers to
 // take screenshots concurrently.
 //
-// A browser will be used only once to take a screenshot.
-// They should not open multiple tabs.
-//
-// A browser also has an expiration date of 5 hours.
+// A browser also has an expiration date.
 // After which it will be closed and a new one will be created.
 //
 // Example:
 //
 //	m := mischief.New(
-//		mischief.WithConcurrency(5),
+//		mischief.WithBrowserConcurrency(5),
 //	)
-func WithConcurrency(c int) MischiefOpt {
+func WithBrowserConcurrency(c int) MischiefOpt {
 	return func(m *Mischief) {
-		m.concurrency = c
+		m.browserConcurrency = c
+	}
+}
+
+// WithPageConcurrency is an option to set the concurrency of the
+// screenshotting process.
+//
+// By default, this will create a pool of <n> pages to
+// take screenshots concurrently.
+//
+// A page will be used only once to take a screenshot.
+func WithPageConcurrency(c int) MischiefOpt {
+	return func(m *Mischief) {
+		m.pageConcurrency = c
 	}
 }
 
@@ -78,6 +88,22 @@ func WithLogger(logger *slog.Logger) MischiefOpt {
 func WithBrowserRetakeTimeout(timeout time.Duration) MischiefOpt {
 	return func(m *Mischief) {
 		m.browserRetakeTimeout = timeout
+	}
+}
+
+// WithPageRetakeTimeout is an option to set the timeout
+// when taking a page from the pool.
+//
+// By default, this is set to 5 seconds.
+//
+// Example:
+//
+//	m := mischief.New(
+//		mischief.WithPageRetakeTimeout(10*time.Second),
+//	)
+func WithPageRetakeTimeout(timeout time.Duration) MischiefOpt {
+	return func(m *Mischief) {
+		m.pageRetakeTimeout = timeout
 	}
 }
 

@@ -18,8 +18,22 @@ export const options = {
   },
 };
 
+export const uris = [
+  "https://yewolf.fr",
+  "https://google.com",
+  "https://github.com",
+  "https://twitter.com",
+  "https://facebook.com",
+  "https://instagram.com",
+  "https://linkedin.com",
+  "https://youtube.com",
+  "https://reddit.com",
+  "https://wikipedia.org",
+];
+
+
 export default function() {
-  let res = http.get('http://localhost:8080/api/screenshot?url=https://google.com');
+  let res = http.get(`http://localhost:8080/api/screenshot?url=${uris[Math.floor(Math.random() * uris.length)]}`);
   check(res, { "status is 200": (res) => res.status === 200 });
   sleep(1);
 }

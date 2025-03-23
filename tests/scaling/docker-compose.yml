@@ -1,6 +1,5 @@
 services:
   rodent:
-    # image: ghcr.io/yyewolf/rodent:1
     build:
       context: ../../
       dockerfile: docker/Dockerfile
@@ -10,9 +9,11 @@ services:
       - "api"
       - "--host=0.0.0.0"
       - "--port=8080"
-      - "--concurrency=20"
-      - "--page-stability-timeout=1"
+      - "--browser-concurrency=10"
+      - "--page-concurrency=3"
+      - "--page-stability-timeout=15"
       - "--browser-retake-timeout=30"
+      - "--page-retake-timeout=3"
   
   # k6:
   #   image: grafana/k6

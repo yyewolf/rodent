@@ -17,8 +17,10 @@ var (
 	port     string
 	browsers string
 
-	concurrency          int
+	browserConcurrency   int
+	pageConcurrency      int
 	browserRetakeTimeout int
+	pageRetakeTimeout    int
 	pageStabilityTimeout int
 )
 
@@ -31,8 +33,10 @@ var apiCmd = &cobra.Command{
 		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 		mischief, err := mischief.New(
-			mischief.WithConcurrency(concurrency),
+			mischief.WithBrowserConcurrency(browserConcurrency),
+			mischief.WithPageConcurrency(pageConcurrency),
 			mischief.WithBrowserRetakeTimeout(time.Duration(browserRetakeTimeout)*time.Second),
+			mischief.WithPageRetakeTimeout(time.Duration(pageRetakeTimeout)*time.Second),
 			mischief.WithPageStabilityTimeout(time.Duration(pageStabilityTimeout)*time.Second),
 			mischief.WithLogger(logger),
 		)
@@ -79,7 +83,9 @@ func init() {
 	apiCmd.Flags().StringVarP(&port, "port", "p", "8080", "Port to run the API server on.")
 	apiCmd.Flags().StringVarP(&host, "host", "H", "localhost", "Host to run the API server on.")
 	apiCmd.Flags().StringVarP(&browsers, "browsers", "b", "http://localhost:9222", "URLs to connect to external browsers. Use commas to separate multiple URLs.")
-	apiCmd.Flags().IntVarP(&concurrency, "concurrency", "c", 1, "Number of browsers to use to take screenshots concurrently.")
+	apiCmd.Flags().IntVarP(&browserConcurrency, "browser-concurrency", "C", 1, "Number of browsers to use to take screenshots concurrently.")
+	apiCmd.Flags().IntVarP(&pageConcurrency, "page-concurrency", "c", 1, "Number of pages to use to take screenshots concurrently.")
 	apiCmd.Flags().IntVarP(&browserRetakeTimeout, "browser-retake-timeout", "r", 5, "Timeout used when taking a browser from the pool.")
+	apiCmd.Flags().IntVarP(&pageRetakeTimeout, "page-retake-timeout", "t", 5, "Timeout used when taking a page from the pool.")
 	apiCmd.Flags().IntVarP(&pageStabilityTimeout, "page-stability-timeout", "s", 3, "Timeout used when waiting for the page to be stable.")
 }

@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ darwin, freebsd, linux, openbsd, windows ]
+        os: [ darwin, freebsd, linux, openbsd ]
         arch: [ amd64, arm64 ]
         include:
           - os: freebsd
@@ -39,8 +39,6 @@ jobs:
           - os: linux
             arch: s390x
           - os: openbsd
-            arch: 386
-          - os: windows
             arch: 386
 
     steps:
@@ -62,4 +60,6 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           GOARM: ${{ matrix.goarm }}
-        run: make binary
+        run: |
+          echo "Building for $GOOS/$GOARCH"
+          go build -trimpath -ldflags '-w -s' -o bin/rodent-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.goarm }} .

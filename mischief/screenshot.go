@@ -3,6 +3,7 @@ package mischief
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/go-rod/rod/lib/proto"
 )
@@ -24,24 +25,40 @@ import (
 func (mischief *Mischief) TakeScreenshot(url string) ([]byte, error) {
 	mischief.logger.Info("mischief is taking a screenshot", slog.Any("url", url))
 
-	browser, err := mischief.getBrowser()
+	rat, err := mischief.getRat()
 	if err != nil {
 		return nil, errors.Join(ErrGettingBrowser, err)
 	}
-	defer mischief.browserPool.Put(browser)
+	defer mischief.ratPool.Put(rat)
 
-	page, err := browser.Page(proto.TargetCreateTarget{URL: url})
+	rat.Lock()
+	defer rat.Unlock()
+
+	page, err := rat.GetPage()
 	if err != nil {
-		return nil, errors.Join(ErrOpeningPage, err)
+		return nil, errors.Join(ErrGettingPage, err)
 	}
-	defer page.Close()
+	defer rat.PutPage(page)
 
-	err = page.WaitDOMStable(mischief.pageStabilityTimeout, 30)
+	page = page.Timeout(mischief.pageStabilityTimeout)
+
+	err = page.Navigate(url)
+	if err != nil {
+		return nil, errors.Join(ErrNavigatingToPage, err)
+	}
+
+	err = page.WaitDOMStable(time.Millisecond, 0)
 	if err != nil {
 		return nil, errors.Join(ErrWaitingForPageToBeStable, err)
 	}
 
-	bytes, err := page.Screenshot(true, nil)
+	page = page.CancelTimeout()
+
+	screenshotParams := &proto.PageCaptureScreenshot{
+		Format: proto.PageCaptureScreenshotFormatPng,
+	}
+
+	bytes, err := page.Screenshot(false, screenshotParams)
 	if err != nil {
 		return nil, errors.Join(ErrWhileTakingScreenshot, err)
 	}

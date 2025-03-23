@@ -110,7 +110,7 @@ func (apiServer *ApiServer) Start() {
 
 		err := apiServer.server.Run()
 
-		apiServer.mischief.Destroy(context.Background())
+		_ = apiServer.mischief.Destroy(context.Background())
 		apiServer.reaper.Shutdown()
 
 		if !errors.Is(err, http.ErrServerClosed) {
