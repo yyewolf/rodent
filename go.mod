@@ -10,6 +10,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.9.1
+	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6
 )
 
 require (

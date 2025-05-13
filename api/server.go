@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"os"
 
 	"github.com/go-fuego/fuego"
 	"github.com/yyewolf/rodent/mischief"
+	"github.com/yyewolf/rodent/reaper"
 )
 
 // ApiServer is the main struct of the API server.
@@ -18,6 +22,8 @@ type ApiServer struct {
 	// host is the host to run the API server on
 	host string
 
+	// reaper is the reaper to use
+	reaper *reaper.Reaper
 	// mischief is the Mischief instance to use
 	mischief *mischief.Mischief
 	// logger is the logger of the API server
@@ -64,6 +70,10 @@ func New(opts ...ApiServerOpt) (*ApiServer, error) {
 		apiServer.mischief = mischief
 	}
 
+	if apiServer.reaper == nil {
+		apiServer.reaper = reaper.NewReaper(apiServer.logger)
+	}
+
 	apiServer.server = fuego.NewServer(
 		fuego.WithAddr(fmt.Sprintf("%s:%s", apiServer.host, apiServer.port)),
 		fuego.WithLogHandler(apiServer.logger.Handler()),
@@ -83,6 +93,7 @@ func New(opts ...ApiServerOpt) (*ApiServer, error) {
 func (apiServer *ApiServer) register() {
 	var repositories = []Repository{
 		NewScreenshotRepository(apiServer.mischief, apiServer.logger),
+		NewCleanupRepository(apiServer.mischief, apiServer.logger),
 	}
 
 	group := fuego.Group(apiServer.server, "/api")
@@ -93,6 +104,23 @@ func (apiServer *ApiServer) register() {
 }
 
 // Start starts the API server.
-func (apiServer *ApiServer) Start() error {
-	return apiServer.server.Run()
+func (apiServer *ApiServer) Start() {
+	go func() {
+		apiServer.reaper.Start()
+
+		err := apiServer.server.Run()
+
+		_ = apiServer.mischief.Destroy(context.Background())
+		apiServer.reaper.Shutdown()
+
+		if !errors.Is(err, http.ErrServerClosed) {
+			apiServer.logger.Error("error while running the API server", slog.Any("error", err))
+			os.Exit(1)
+		}
+	}()
+}
+
+// Stop stops the API server.
+func (apiServer *ApiServer) Shutdown(ctx context.Context) error {
+	return apiServer.server.Shutdown(ctx)
 }

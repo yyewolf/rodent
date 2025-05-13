@@ -1,50 +1,47 @@
 package mischief
 
 import (
-	"errors"
 	"os"
-	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/yyewolf/rodent/pool"
+	"github.com/yyewolf/rodent/rat"
 )
 
-func createBrowser(controlUrl *string) func() (*rod.Browser, error) {
-	return func() (b *rod.Browser, err error) {
+func createBrowser(controlUrl *string) func(*rat.Rat) error {
+	return func(rat *rat.Rat) error {
+		var newControlUrl string
+
 		if controlUrl == nil {
 			uri, err := launcher.New().Bin(os.Getenv("BROWSER_PATH")).Launch()
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			controlUrl = &uri
+			newControlUrl = uri
+		} else {
+			newControlUrl = *controlUrl
 		}
 
-		browser := rod.New().ControlURL(*controlUrl)
+		browser := rod.New().ControlURL(newControlUrl)
 
-		err = browser.Connect()
+		err := browser.Connect()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return browser, nil
+		rat.Browser = browser
+
+		return rat.Initialize()
 	}
 }
 
-func getFromPoolWithTimeout[K any](pool rod.Pool[K], timeout time.Duration) (*K, error) {
-	select {
-	case elem := <-pool:
-		return elem, nil
-	case <-time.After(timeout):
-		return nil, errors.New("timeout")
-	}
-}
-
-func (mischief *Mischief) getBrowser() (*rod.Browser, error) {
-	browser, err := getFromPoolWithTimeout(mischief.browserPool, mischief.browserRetakeTimeout)
+func (mischief *Mischief) getRat() (*rat.Rat, error) {
+	rat, err := pool.GetFromPoolWithTimeout(mischief.ratPool, mischief.browserRetakeTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	return browser, nil
+	return rat, nil
 }

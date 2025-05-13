@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/yyewolf/rodent/rat"
 )
 
 // Mischief is the main struct of the Mischief package.
@@ -16,19 +17,27 @@ type Mischief struct {
 	externalBrowser bool
 	// browserUrls is a list of URLs to connect to external browsers, it should be set when externalBrowser is true
 	browserUrls []string
-	// concurrency is the number of browsers to use to take screenshots concurrently
-	concurrency int
+	// browserConcurrency is the number of browsers to use to take screenshots concurrently
+	browserConcurrency int
+	// pageConcurrency is the number of pages to use to take screenshots concurrently
+	pageConcurrency int
 
 	// logger is the logger of the Mischief instance
 	logger *slog.Logger
 
-	// browserPool is the pool of browsers
-	browserPool rod.Pool[rod.Browser]
+	// ratPool is the pool of browsers
+	ratPool rod.Pool[rat.Rat]
+	rats    []*rat.Rat
 
 	// browserRetakeTimeout is the timeout used when taking a browser from the pool
 	browserRetakeTimeout time.Duration
+	// pageRetakeTimeout is the timeout used when taking a page from the pool
+	pageRetakeTimeout time.Duration
 	// pageStabilityTimeout is the timeout used when waiting for the page to be stable
 	pageStabilityTimeout time.Duration
+
+	// watchratCancel is the context used to watch the rat
+	watchratCancel context.CancelFunc
 }
 
 type MischiefOpt func(*Mischief)
@@ -48,9 +57,11 @@ func New(opts ...MischiefOpt) (*Mischief, error) {
 	var m Mischief
 
 	var defaultOpts = []MischiefOpt{
-		WithConcurrency(1),
+		WithBrowserConcurrency(1),
+		WithPageConcurrency(1),
 		WithLogger(slog.Default()),
 		WithBrowserRetakeTimeout(5 * time.Second),
+		WithPageRetakeTimeout(5 * time.Second),
 		WithPageStabilityTimeout(3 * time.Second),
 	}
 
@@ -65,6 +76,11 @@ func New(opts ...MischiefOpt) (*Mischief, error) {
 		return nil, err
 	}
 
+	watchratCtx, watchratCancel := context.WithCancel(context.Background())
+	m.watchratCancel = watchratCancel
+
+	go m.watchrat(watchratCtx)
+
 	return &m, nil
 }
 
@@ -72,52 +88,42 @@ func New(opts ...MischiefOpt) (*Mischief, error) {
 //
 // It creates a pool of browsers to take screenshots concurrently.
 func (mischief *Mischief) initialize() error {
-	mischief.browserPool = rod.NewBrowserPool(mischief.concurrency)
+	mischief.ratPool = rod.NewPool[rat.Rat](mischief.browserConcurrency * mischief.pageConcurrency)
 
-	var browsers []*rod.Browser = make([]*rod.Browser, mischief.concurrency)
+	var rats []*rat.Rat = make([]*rat.Rat, mischief.browserConcurrency)
 
 	// Instanciate every browser
-	for i := 0; i < mischief.concurrency; i++ {
-		var browser *rod.Browser
+	for i := 0; i < mischief.browserConcurrency; i++ {
 		var err error
+		var uri *string
 
 		if mischief.externalBrowser {
-			mischief.logger.Info("mischief is connecting to external browser", slog.Any("url", mischief.browserUrls[i]))
-			browser, err = mischief.browserPool.Get(createBrowser(&mischief.browserUrls[i]))
-		} else {
-			mischief.logger.Info("mischief is creating a new browser")
-			browser, err = mischief.browserPool.Get(createBrowser(nil))
+			uri = &mischief.browserUrls[i]
 		}
+
+		mischief.logger.Info("mischief is creating rat", slog.Any("uri", uri))
+		rat, err := rat.New(
+			rat.WithPagePoolLength(mischief.pageConcurrency),
+			rat.WithPageRetakeTimeout(mischief.pageRetakeTimeout),
+			rat.WithCreateBrowserFunc(createBrowser(uri)),
+		)
 		if err != nil {
 			return err
 		}
 
-		browsers[i] = browser
+		rats[i] = rat
 	}
+
+	mischief.rats = rats
 
 	// Put them back in the pool for usage later on
-	for _, browser := range browsers {
-		mischief.browserPool.Put(browser)
-	}
+	for _, r := range rats {
+		for i := 0; i < mischief.pageConcurrency; i++ {
+			r, _ = mischief.ratPool.Get(func() (*rat.Rat, error) {
+				return r, nil
+			})
 
-	return nil
-}
-
-// Destroy destroys the Mischief instance.
-//
-// It waits for all the browsers in the pool and closes them.
-func (mischief *Mischief) Destroy(ctx context.Context) error {
-	mischief.logger.Info("mischief is destroying")
-	for i := 0; i < mischief.concurrency; i++ {
-		select {
-		case browser := <-mischief.browserPool:
-			if browser == nil {
-				continue
-			}
-
-			browser.Close()
-		case <-ctx.Done():
-			return ctx.Err()
+			mischief.ratPool.Put(r)
 		}
 	}
 

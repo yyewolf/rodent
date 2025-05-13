@@ -12,6 +12,12 @@ Rodent is a cloud native, high-availability screenshotting service.
 
 - `mischief`: in reference to the fact that a "group of rats" is called a "mischief of rats"
 
+# Features
+
+- [x] Screenshot a URL
+- [ ] Screenshot a URL with a custom viewport
+- [x] Take care of "zombie" processes from the browser
+
 # CLI - Quickstart
 
 Install the CLI:
